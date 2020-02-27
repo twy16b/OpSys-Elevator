@@ -5,9 +5,9 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#define __NR_START_ELEVATOR 335
-#define __NR_ISSUE_REQUEST 336
-#define __NR_STOP_ELEVATOR 337
+#define __NR_START_ELEVATOR 436
+#define __NR_ISSUE_REQUEST 437
+#define __NR_STOP_ELEVATOR 438
 
 int start_elevator() {
 	return syscall(__NR_START_ELEVATOR);
