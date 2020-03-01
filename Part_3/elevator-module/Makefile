@@ -5,7 +5,6 @@ KERNELDIR := /lib/modules/`uname -r`/build
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
-	insmod elevator.ko
 
 insert:
 	insmod elevator.ko
