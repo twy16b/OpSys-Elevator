@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 		
-	pet_type = rnd(0, 1);
+	pet_type = rnd(1,2);
 	num_pets = rnd(0,3);
 	start = rnd(1, 10);
 	do {
