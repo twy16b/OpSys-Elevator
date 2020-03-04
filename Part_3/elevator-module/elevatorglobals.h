@@ -1,6 +1,9 @@
 #ifndef __ELEVATORGLOBALS_H
 #define __ELEVATORGLOBALS_H
 
+#include <linux/list.h>
+#include <linux/mutex.h>
+
 #define MAXLOAD 15
 
 int ELEV_STATE;
@@ -22,6 +25,16 @@ struct Passenger{
 	int weight;
 	int start;
 	int dest;
+	struct list_head mylist;
 };
+
+int waiting_count[10];
+struct list_head floors[10];
+struct list_head queue;
+struct list_head current_passengers;
+
+struct mutex global_lock;
+
+int UpDown;
 
 #endif
