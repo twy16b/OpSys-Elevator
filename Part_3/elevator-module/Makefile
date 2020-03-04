@@ -12,14 +12,5 @@ insert:
 remove:
 	rmmod elevator.ko
 
-start:
-	/home/yelverto/Documents/Project_2/Part_3/consumer.x --start
-
-stop:
-	/home/yelverto/Documents/Project_2/Part_3/consumer.x --stop
-
-produce:
-	/home/yelverto/Documents/Project_2/producer.x
-
 clean:
 	rm -f *.ko *.o Module* *mod*
