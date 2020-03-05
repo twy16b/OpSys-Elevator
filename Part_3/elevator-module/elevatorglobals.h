@@ -1,10 +1,10 @@
 #ifndef __ELEVATORGLOBALS_H
 #define __ELEVATORGLOBALS_H
-
 #include <linux/list.h>
-#include <linux/mutex.h>
 
 #define MAXLOAD 15
+
+struct list_head floor_list[10];
 
 int ELEV_STATE;
 enum STATE {OFFLINE = 0, IDLE, LOADING, UP, DOWN};
@@ -18,23 +18,24 @@ int ELEV_PSNGRS;
 int ELEV_WEIGHT;
 int ELEV_SERVICED;
 
+int PASSENGERS_WAITING;
+
+//List of passengers inside elevator
+struct{
+	int total_weight;
+	int total_passengers;
+	struct list_head list;
+}passengers;
+
 //Passenger linked list object
-struct Passenger{
+typedef struct Passenger{
 	int num_pets;
 	int pet_type;
 	int weight;
 	int start;
 	int dest;
-	struct list_head mylist;
-};
-
-int waiting_count[10];
-struct list_head floors[10];
-struct list_head queue;
-struct list_head current_passengers;
-
-struct mutex global_lock;
-
-int UpDown;
+	struct list_head list;
+} Passenger;
 
 #endif
+
