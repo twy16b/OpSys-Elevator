@@ -18,20 +18,19 @@ static ssize_t print_status(struct file *file, char __user *ubuf, size_t count, 
 	struct Passenger *psngr;
 	char states[5][10] = { "OFFLINE", "IDLE", "LOADING", "UP", "DOWN" };
 	char pets[3][5] = { "None", "Cat", "Dog" };
-	//printk(KERN_ALERT "Global Lock: %d\n", global_lock);
 	if(*ppos > 0 || count < BUFSIZE) return 0;
 	if(mutex_lock_interruptible(&global_lock) == 0) {
 		len += sprintf(buf+len, "Elevator State: %s\n", states[ELEV_STATE]);
-		len += sprintf(buf+len, "ELevator Pet Type: %s\n", pets[ELEV_PET_TYPE]);
+		len += sprintf(buf+len, "ELevator Pet Type: %s\n", pets[getPetType()]);
 		len += sprintf(buf+len, "Current Floor: %d\n", ELEV_FLOOR);
 		len += sprintf(buf+len, "Number of Passengers: %d\n", ELEV_PSNGRS);
 		len += sprintf(buf+len, "Current Weight: %d\n", ELEV_WEIGHT);
 		len += sprintf(buf+len, "Passengers Waiting: %d\n", total_waiting());
 		len += sprintf(buf+len, "Passengers Serviced: %d\n\n\n", ELEV_SERVICED);
-		len += sprintf(buf+len, "Passengers On Elevator: ");
+		len += sprintf(buf+len, "Passengers On Elevator:");
 		list_for_each(pos, &current_passengers) {
 			psngr = list_entry(pos, struct Passenger, mylist);
-			len += sprintf(buf+len, "|");
+			len += sprintf(buf+len, " %d", psngr->dest);
 			if (psngr->num_pets > 0) {
 				if (psngr->pet_type == dog) {
 					for(petsloop = 0; petsloop < psngr->num_pets; ++petsloop) {
@@ -51,12 +50,14 @@ static ssize_t print_status(struct file *file, char __user *ubuf, size_t count, 
 			len += sprintf(buf+len, "[");
 			if(ELEV_FLOOR == floorloop) len += sprintf(buf+len, "*");
 			else len += sprintf(buf+len,  " ");
-			len += sprintf(buf+len, "] Floor %d:\t%d", floorloop, waiting_count[floorloop-1]);
+			len += sprintf(buf+len, "] Floor %d:\t%d ", floorloop, waiting_count[floorloop-1]);
 			list_for_each(pos, &queue) {
 				psngr = list_entry(pos, struct Passenger, mylist);
 				if (psngr->start == floorloop) {
-					len += sprintf(buf+len, "|");
+					if (psngr->upOrDown == UP) len += sprintf(buf+len, " ^");
+					else len += sprintf(buf+len, " v");
 					if (psngr->num_pets > 0) {
+						len += sprintf(buf+len, "-");
 						if (psngr->pet_type == dog) {
 							for(petsloop = 0; petsloop < psngr->num_pets; ++petsloop) {
 								len += sprintf(buf+len, "o");

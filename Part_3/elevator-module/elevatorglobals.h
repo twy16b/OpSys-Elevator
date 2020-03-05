@@ -25,16 +25,14 @@ struct Passenger{
 	int weight;
 	int start;
 	int dest;
+	int upOrDown;
 	struct list_head mylist;
 };
 
 int waiting_count[10];
-struct list_head floors[10];
 struct list_head queue;
 struct list_head current_passengers;
 
 struct mutex global_lock;
-
-int UpDown;
 
 #endif

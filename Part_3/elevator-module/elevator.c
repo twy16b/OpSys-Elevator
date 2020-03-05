@@ -9,10 +9,6 @@
 #include "readhandler.h"
 MODULE_LICENSE("GPL");
 
-//-------------------------------------------------------------------------------------
-
-//-------------------------------------------------------------------------------------
-
 //----------------------------------Thread Structs-------------------------------------
 struct thread_parameter {
 	int id;
@@ -22,63 +18,34 @@ struct thread_parameter elevator_thread;
 
 //-----------------------------Elevator Thread Function--------------------------------
 int run_elevator(void *data) {
-	//struct thread_parameter *parm = data;
-	struct Passenger *first_in_line;
 	struct Passenger *psngr;
 
 	//Elevator process loop
-	while(!kthread_should_stop()) {
-
-		//Decide where to go
-		if (ELEV_PSNGRS > 0) {
-			psngr = list_first_entry(&current_passengers, struct Passenger, mylist);
-			if(ELEV_FLOOR < psngr->dest) setElevState(UP);
-			if(ELEV_FLOOR > psngr->dest) setElevState(DOWN);
-		}
-		else if(total_waiting() > 0) {
-			psngr = list_first_entry(&queue, struct Passenger, mylist);
-			if (ELEV_FLOOR < psngr->start) setElevState(UP);
-			if (ELEV_FLOOR > psngr->start) setElevState(DOWN);
-		}
-		else setElevState(IDLE);
+	while(!ELEV_SHUTDOWN) {
 
 		//Unload Passengers
 		elevUnload();
 
+		//Decide where to go
+		if (ELEV_PSNGRS > 0) {
+			psngr = list_first_entry(&current_passengers, struct Passenger, mylist);
+			if(ELEV_FLOOR < psngr->dest) elevSetState(UP);
+			if(ELEV_FLOOR > psngr->dest) elevSetState(DOWN);
+		}
+		else if(total_waiting() > 0) {
+			psngr = list_first_entry(&queue, struct Passenger, mylist);
+			if (ELEV_FLOOR < psngr->start) elevSetState(UP);
+			if (ELEV_FLOOR == psngr->start) elevSetState(LOADING);
+			if (ELEV_FLOOR > psngr->start) elevSetState(DOWN);
+		}
+		else elevSetState(IDLE);
+
 		//Pick up passengers
-		while(waiting_count[ELEV_FLOOR-1] > 0) {
-
-			first_in_line = elevGetFirstInLine();
-
-			if(first_in_line->weight + ELEV_WEIGHT > MAXLOAD || (first_in_line->pet_type != ELEV_PET_TYPE && ELEV_PET_TYPE != 0)) break;
-
-			setElevState(LOADING);
-			ssleep(1);
-
-			psngr = kmalloc(sizeof(struct Passenger), __GFP_RECLAIM);
-			if(!psngr) {
-				printk(KERN_ALERT "NO MEMORY LEFT!\n");
-				return -ENOMEM;
-			}
-
-			*psngr = *first_in_line;
-			INIT_LIST_HEAD(&psngr->mylist);
-
-			if(mutex_lock_interruptible(&global_lock) == 0) {
-				ELEV_PSNGRS += 1 + psngr->num_pets;
-				ELEV_WEIGHT += psngr->weight;
-				ELEV_PET_TYPE = psngr->pet_type;
-				list_add_tail(&psngr->mylist, &current_passengers);
-				waiting_count[ELEV_FLOOR-1] -= 1 + psngr->num_pets;
-				list_del(&first_in_line->mylist);
-			}
-			mutex_unlock(&global_lock);
+		elevLoad();
 
 		//Move floors
 		if(ELEV_STATE == UP) elevMove(UP);
 		if(ELEV_STATE == DOWN) elevMove(DOWN);
-
-		}
 	}
 
 	//Elevator shutdown protocol
@@ -86,13 +53,13 @@ int run_elevator(void *data) {
 	//Unload all passengers at their destinations
 	while (ELEV_PSNGRS > 0) {
 		psngr = list_first_entry(&current_passengers, struct Passenger, mylist);
-		if(ELEV_FLOOR < psngr->dest) setElevState(UP);
-		if(ELEV_FLOOR > psngr->dest) setElevState(DOWN);
+		if(ELEV_FLOOR < psngr->dest) elevSetState(UP);
+		if(ELEV_FLOOR > psngr->dest) elevSetState(DOWN);
 		if(ELEV_STATE == UP) elevMove(UP);
 		if(ELEV_STATE == DOWN) elevMove(DOWN);
 		elevUnload();
 	}
-	setElevState(OFFLINE);
+	elevSetState(OFFLINE);
 
 	return 0;
 }
@@ -109,12 +76,12 @@ extern int (*STUB_start_elevator)(void);
 int start_elevator(void) {
 	printk(KERN_NOTICE "%s: Start elevator syscall\n", __FUNCTION__);
 
+	if(ELEV_STATE != OFFLINE) return 1;
+
 	ELEV_STATE = IDLE;
 	ELEV_SHUTDOWN = 0;
-	ELEV_PET_TYPE = none;
 	ELEV_PSNGRS = 0;
 	ELEV_WEIGHT = 0;
-	ELEV_SERVICED = 0;
 
 	thread_init_parameter(&elevator_thread);
 
@@ -125,7 +92,7 @@ extern int (*STUB_issue_request)(int, int, int, int);
 int issue_request(int num_pets, int pet_type, int start, int dest) {
 	struct Passenger *psngr;
 
-	//--------------Check for valid arguments
+	//Check for valid arguments
 	if(num_pets < 0 || num_pets > 3 ||
 	pet_type < 0 || pet_type > 2 ||
 	start < 1 || start > 10 ||
@@ -135,17 +102,22 @@ int issue_request(int num_pets, int pet_type, int start, int dest) {
 		return 1;
 	}
 
+	//Allocate memory for new passenger
 	psngr = kmalloc(sizeof(struct Passenger), __GFP_RECLAIM);
 	if(!psngr) {
 		printk(KERN_ALERT "NO MEMORY LEFT!\n");
 		return -ENOMEM;
 	}
 
+	//Set values for new passenger
 	psngr->num_pets = num_pets;
 	psngr->pet_type = pet_type;
 	psngr->weight = 3+(pet_type*num_pets);
 	psngr->start = start;
 	psngr->dest = dest;
+	if (psngr->dest > psngr->start) psngr->upOrDown = UP;
+	else if (psngr->dest < psngr->start) psngr->upOrDown = DOWN;
+
 	INIT_LIST_HEAD(&psngr->mylist);
 
 	if(mutex_lock_interruptible(&global_lock) == 0) {
@@ -162,11 +134,12 @@ extern int (*STUB_stop_elevator)(void);
 int stop_elevator(void) {
 	printk(KERN_NOTICE "%s: Stop elevator syscall\n", __FUNCTION__);
 
-	if (ELEV_STATE == OFFLINE) return 1;
+	if (!ELEV_SHUTDOWN) { 
+		ELEV_SHUTDOWN = 1;
+		return 0;
+	}
 
-	kthread_stop(elevator_thread.kthread);
-
-	return 0;
+	return ELEV_SHUTDOWN;
 }
 
 //-----------------------------Elevator Module Init------------------------------------
@@ -185,8 +158,14 @@ static int elevator_init(void) {
 
 	mutex_init(&global_lock);
 
+	ELEV_STATE = OFFLINE;
+	ELEV_SHUTDOWN = 0;
+	ELEV_PET_TYPE = none;
 	ELEV_FLOOR = 1;
-	setElevState(OFFLINE);
+	ELEV_PSNGRS = 0;
+	ELEV_WEIGHT = 0;
+	ELEV_SERVICED = 0;
+
 
 	return 0;
 }
@@ -194,7 +173,7 @@ module_init(elevator_init);
 
 //-----------------------------Elevator Module Exit------------------------------------
 static void elevator_exit(void) {
-	stop_elevator();
+	elevClear();
 
 	STUB_start_elevator = NULL;
 	STUB_issue_request = NULL;
