@@ -30,19 +30,41 @@ Every subsequent `cat /proc/timed` will print the current kernel time as well as
 
 ## Part 3 
 
-The elevator module can be compiled by running `make` in the containing folder along with all the header files.
+### Elevator Module
 
-Insert the module using `sudo insmod elevator.ko` after it has compiled.
+The `elevator` folder should be placed in `/usr/src/`. It can be compiled by running `make` in that folder.
 
-Once inserted, you may invoke the `issue_request(int, int, int, int)` syscall to queue some passengers or immediately invoke the `start_elevator(void)` syscall to put it in idle.
+Insert the module using `sudo insmod elevator.ko` in `elevator` or `sudo make insert` using the provided userspace Makefile.
 
-Once `start_elevator(void)` is called, the elevator will run indefinitely in a kthread delivering the current passengers until it is empty. If it is empty, it will search for passengers to pick up based on the earliest request.
+Once inserted, you may invoke `issue_request(int, int, int, int)` calls with `make issue` at any time regardless if the elevator is active or not.
 
-The `issue_request(int, int, int, int)` can be called at any time and as many times as needed, however if there are too many requests at one time the kernel may run out of memory and crash.
+When you are ready to start the elevator, invoke `start_elevator(void)` with `make start` to begin.
 
-On each floor, it will first unload all passengers that want to get off. Then, it will pick up passengers if possible. There are 2 possible functions that can be used to pick up passengers. 
+On each floor, the elevator will go through a loop as follows:
 
-- The first, `elevLoadFast(void)`, will deliver more passengers over a period of time. However, it has a tendency to stick to one pet type if requests keep coming in. This makes it possible for one pet type to be neglected for a long period, even if they are at the front of the line.
-- The other function, `elevLoadFair(void)` is a bit slower to deliver passengers as it will only pick up people at the front of the line, but this ensures people in the front of the line do not get skipped over repeatedly because of their pet type.
+- Unload all current passengers that want to get off
+- Decide which direction it wants to go
+- Load compatible passengers.
+
+If there are no passengers inside the elevator or waiting on any floors, the elevator returns to IDLE state until a new request comes.
 
 The user may invoke `stop_elevator(void)` at any time. Once this shutdown process begins, the elevator will pick up no new passengers and deliver all passengers currently on board. Once the elevator is empty, it goes offline.
+
+If the module is removed, all current passengers and those waiting in line are freed from memory to avoid leakage.
+
+### /proc/elevator
+
+The proc entry for this module will print out all needed information at any given time.
+
+- The elevator's movement state:
+- The type of animals on the elevator, if any
+- The current floor the elevator is on
+- The elevator's current load (in terms of both passengers units and weight units)
+- The total number of passengers waiting
+- The number of passengers serviced
+
+Human passengers are denoted by either a '^' or a 'v' depending on whether they wish to go up or down respectively.
+
+Animal passengers are attached to their owner with a '-' leash. Cats are represented by an 'x' and dogs are represented by an 'o'.
+
+Once loaded onto the elevator, the passenger will be displayed above the floors in the **Passengers on Elevator** section. The number denotes which floor they wish to get off and the pet symbols remain the same.
