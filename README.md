@@ -54,15 +54,9 @@ If the module is removed, all current passengers and those waiting in line are f
 
 ### /proc/elevator
 
-The proc entry for this module will print out all needed information at any given time.
+The proc entry for this module will print out all required information at any given time with a few minor additions.
 
-- Elevator State
-- Pet Type
-- Current Floor
-- Number of Passengers
-- Current Weight
-- Passengers Waiting
-- Passengers Serviced
+![Proc Output Example](https://github.com/twy16b/OpSys-Elevator/blob/master/proc_example.png)
 
 Human passengers are denoted by either a '^' or a 'v' depending on whether they wish to go up or down respectively.
 
