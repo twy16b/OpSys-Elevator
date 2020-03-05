@@ -159,7 +159,7 @@ static int elevator_init(void) {
 	mutex_init(&global_lock);
 
 	ELEV_STATE = OFFLINE;
-	ELEV_SHUTDOWN = 0;
+	ELEV_SHUTDOWN = 1;
 	ELEV_PET_TYPE = none;
 	ELEV_FLOOR = 1;
 	ELEV_PSNGRS = 0;
