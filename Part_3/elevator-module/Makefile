@@ -7,10 +7,10 @@ default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 insert:
-	insmod elevator.ko
+	sudo insmod elevator.ko
 
 remove:
-	rmmod elevator.ko
+	sudo rmmod elevator.ko
 
 clean:
 	rm -f *.ko *.o Module* *mod*
