@@ -16,7 +16,7 @@ static ssize_t print_status(struct file *file, char __user *ubuf, size_t count, 
 	Passenger* p;
 	int psngr_cnt;
 	char buf[BUFSIZE];
-	int len = 0, i = 0;
+	int len = 0, i = 0, j = 0;
 	char states[5][10] = { "OFFLINE", "IDLE", "LOADING", "UP", "DOWN" };
 	char pets[3][5] = { "None", "Cat", "Dog" };
 	if(*ppos > 0 || count < BUFSIZE) return 0;
@@ -32,15 +32,29 @@ static ssize_t print_status(struct file *file, char __user *ubuf, size_t count, 
 		len += sprintf(buf+len, "[");
 		if(ELEV_FLOOR == i) len += sprintf(buf+len, "*");
 		else len += sprintf(buf+len,  " ");
-		list_for_each(temp, &floor_list[i]){
+		list_for_each(temp, &floor_list[i-1]){
 			if((p = list_entry(temp, Passenger, list)) != NULL){
 				psngr_cnt++;
 				psngr_cnt += p->num_pets;
-			};
-			
+			}
 		}
-		len += sprintf(buf+len, "] Floor %d:\t%d\n", i, psngr_cnt);
-		len += sprintf(buf+len, ")
+		len += sprintf(buf+len, "] Floor %d:\t%d\t", i, psngr_cnt);
+		list_for_each(temp, &floor_list[i-1]){
+                        if((p = list_entry(temp, Passenger, list)) != NULL){
+                                len += sprintf(buf+len, "| ");
+				if(p->pet_type == 1){	//if cat, x
+					for(j = 0; j < p->num_pets; j++){
+						len += sprintf(buf+len, "x ");
+					}
+				}
+				else if(p->pet_type == 2){	//if dog, o
+					for(j = 0; j < p->num_pets; j++){
+                                                len += sprintf(buf+len, "o ");
+                                        }
+				}
+                        }
+                }
+		len += sprintf(buf+len, "\n");
 	}
 	if(copy_to_user(ubuf,buf,len)) return -EFAULT;
 	*ppos = len;
@@ -53,3 +67,4 @@ static struct file_operations procfile_fops = {
 };
 
 #endif
+
