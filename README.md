@@ -56,12 +56,13 @@ If the module is removed, all current passengers and those waiting in line are f
 
 The proc entry for this module will print out all needed information at any given time.
 
-- The elevator's movement state:
-- The type of animals on the elevator, if any
-- The current floor the elevator is on
-- The elevator's current load (in terms of both passengers units and weight units)
-- The total number of passengers waiting
-- The number of passengers serviced
+- Elevator State
+- Pet Type
+- Current Floor
+- Number of Passengers
+- Current Weight
+- Passengers Waiting
+- Passengers Serviced
 
 Human passengers are denoted by either a '^' or a 'v' depending on whether they wish to go up or down respectively.
 
