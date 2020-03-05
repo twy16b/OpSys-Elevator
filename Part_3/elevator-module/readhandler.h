@@ -40,6 +40,7 @@ static ssize_t print_status(struct file *file, char __user *ubuf, size_t count, 
 			
 		}
 		len += sprintf(buf+len, "] Floor %d:\t%d\n", i, psngr_cnt);
+		len += sprintf(buf+len, ")
 	}
 	if(copy_to_user(ubuf,buf,len)) return -EFAULT;
 	*ppos = len;
